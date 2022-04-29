@@ -61,6 +61,8 @@ class DQN:
         else:
             state = torch.tensor([state], dtype=torch.float).to(self.device)
             action = self.q_net(state).argmax().item()
+            # .argmax返回大的值对应的索引值
+            # .item抽取出tensor中的数
         return action
 
     def update(self, transition_dict):
