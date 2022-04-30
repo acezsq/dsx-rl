@@ -27,8 +27,8 @@ class REINFORCE:
         self.device = device
 
     def take_action(self, state):  # 根据动作概率分布随机采样
-        state = torch.tensor([state], dtype=torch.float).to(self.device)
-        probs = self.policy_net(state)
+        state = torch.tensor([state], dtype=torch.float).to(self.device) # 1*4
+        probs = self.policy_net(state)  # 1*2
         action_dist = torch.distributions.Categorical(probs)
         action = action_dist.sample()
         return action.item()
@@ -42,10 +42,10 @@ class REINFORCE:
         self.optimizer.zero_grad()
         for i in reversed(range(len(reward_list))):  # 从最后一步算起
             reward = reward_list[i]
-            state = torch.tensor([state_list[i]],
+            state = torch.tensor([state_list[i]],  # 1*4
                                  dtype=torch.float).to(self.device)
-            action = torch.tensor([action_list[i]]).view(-1, 1).to(self.device)
-            log_prob = torch.log(self.policy_net(state).gather(1, action))
+            action = torch.tensor([action_list[i]]).view(-1, 1).to(self.device) # 1*1
+            log_prob = torch.log(self.policy_net(state).gather(1, action)) # 1*1
             G = self.gamma * G + reward
             loss = -log_prob * G  # 每一步的损失函数
             loss.backward()  # 反向传播计算梯度
