@@ -18,7 +18,7 @@ class WorldEnv:
             [4 + random.uniform(-0.5, 0.5), 4 + random.uniform(-0.5, 0.5)])
         self.state = np.array([0, 0])  # 初始状态
         self.count = 0
-        return np.hstack((self.state, self.goal))
+        return np.hstack((self.state, self.goal))  # 水平方向上拼接
 
     def step(self, action):
         action = np.clip(action, -self.action_bound, self.action_bound)
@@ -53,7 +53,7 @@ class PolicyNet(torch.nn.Module):
 class QValueNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(QValueNet, self).__init__()
-        self.fc1 = torch.nn.Linear(state_dim + action_dim, hidden_dim)
+        self.fc1 = torch.nn.Linear(state_dim + action_dim, hidden_dim)  # Q（s,a）
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = torch.nn.Linear(hidden_dim, 1)
 
@@ -89,8 +89,8 @@ class DDPG:
         self.device = device
 
     def take_action(self, state):
-        state = torch.tensor([state], dtype=torch.float).to(self.device)
-        action = self.actor(state).detach().cpu().numpy()[0]
+        state = torch.tensor([state], dtype=torch.float).to(self.device)  # Tensor:(1,4)
+        action = self.actor(state).detach().cpu().numpy()[0] # ndarray:(2,)
         # 给动作添加噪声，增加探索
         action = action + self.sigma * np.random.randn(self.action_dim)
         return action
@@ -166,23 +166,23 @@ class ReplayBuffer_Trajectory:
                      next_states=[],
                      rewards=[],
                      dones=[])
-        for _ in range(batch_size):
-            traj = random.sample(self.buffer, 1)[0]
-            step_state = np.random.randint(traj.length)
-            state = traj.states[step_state]
-            next_state = traj.states[step_state + 1]
-            action = traj.actions[step_state]
-            reward = traj.rewards[step_state]
-            done = traj.dones[step_state]
+        for _ in range(batch_size):  # batch_size=256
+            traj = random.sample(self.buffer, 1)[0]  # 从buffer中随机抽样一个轨迹
+            step_state = np.random.randint(traj.length)  # 从抽样的轨迹中随机抽样出一个transition
+            state = traj.states[step_state]  # 抽样出的transition的state
+            next_state = traj.states[step_state + 1]  # 抽样出的transition的next_state
+            action = traj.actions[step_state]  # 抽样出的transition的动作
+            reward = traj.rewards[step_state]  # 抽样出的transition的奖励
+            done = traj.dones[step_state]  # 抽样出的transition是否done
 
             if use_her and np.random.uniform() <= her_ratio:
-                step_goal = np.random.randint(step_state + 1, traj.length + 1)
-                goal = traj.states[step_goal][:2]  # 使用HER算法的future方案设置目标
+                step_goal = np.random.randint(step_state + 1, traj.length + 1) # 从上面transition之后的轨迹选择一个设置之后的goal
+                goal = traj.states[step_goal][:2]  # 使用HER算法的future方案设置目标，选择此transition的当前位置作为goal
                 dis = np.sqrt(np.sum(np.square(next_state[:2] - goal)))
                 reward = -1.0 if dis > dis_threshold else 0
                 done = False if dis > dis_threshold else True
-                state = np.hstack((state[:2], goal))
-                next_state = np.hstack((next_state[:2], goal))
+                state = np.hstack((state[:2], goal))  # 将原来的初始位置和后来挑选的goal拼接
+                next_state = np.hstack((next_state[:2], goal)) # 将原来的下一个transition的初始位置和goal拼接
 
             batch['states'].append(state)
             batch['next_states'].append(next_state)
@@ -190,9 +190,9 @@ class ReplayBuffer_Trajectory:
             batch['rewards'].append(reward)
             batch['dones'].append(done)
 
-        batch['states'] = np.array(batch['states'])
-        batch['next_states'] = np.array(batch['next_states'])
-        batch['actions'] = np.array(batch['actions'])
+        batch['states'] = np.array(batch['states'])  # 256*4
+        batch['next_states'] = np.array(batch['next_states']) # 256*4
+        batch['actions'] = np.array(batch['actions']) # 256*2
         return batch
 
 actor_lr = 1e-3
@@ -225,7 +225,7 @@ for i in range(10):
     with tqdm(total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
         for i_episode in range(int(num_episodes / 10)):
             episode_return = 0
-            state = env.reset()
+            state = env.reset()  # state为初始位置与目标位置的拼接
             traj = Trajectory(state)
             done = False
             while not done:
@@ -253,6 +253,13 @@ plt.xlabel('Episodes')
 plt.ylabel('Returns')
 plt.title('DDPG with HER on {}'.format('GridWorld'))
 plt.show()
+
+
+
+
+
+
+
 
 random.seed(0)
 np.random.seed(0)
